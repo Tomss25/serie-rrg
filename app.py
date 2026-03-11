@@ -283,13 +283,6 @@ with tab_data:
                 metrics.append({"Asset": col, "Rendimento %": round(ret,2), "Volatilità %": round(vol,2), "Max DD %": round(dd,2)})
             st.dataframe(pd.DataFrame(metrics).set_index("Asset"), use_container_width=True)
             
-        st.markdown("---")
-        st.subheader("Matrice di Correlazione")
-        if len(df_final.columns) > 1:
-            fig, ax = plt.subplots(figsize=(8, 3))
-            # Rimosso il dark_background per allinearsi al tema chiaro
-            sns.heatmap(df_final.pct_change().corr(), annot=True, cmap="RdYlBu_r", fmt=".2f", vmin=-1, vmax=1, ax=ax)
-            st.pyplot(fig)
     else:
         st.info("👈 Estrai o carica dei dati dalla barra laterale per visualizzare le statistiche.")
 
@@ -314,28 +307,52 @@ with tab_rrg:
                 else:
                     results = compute_zscore_method(df_rrg, benchmark_col, sector_cols)
                 
-                # Plotly RRG Chart (Adattata per il tema chiaro)
+                st.markdown("<br>", unsafe_allow_html=True)
+                
+                # Plotly RRG Chart - Modernizzata
                 fig = go.Figure()
+                
+                # Tracciamento asset e scie
                 for name, v in results.items():
                     ratio = v["rs_ratio"].dropna()
                     mom = v["rs_momentum"].dropna()
                     if ratio.empty or mom.empty: continue
                     
-                    # Scia
                     xs, ys = ratio.tail(8).values, mom.tail(8).values
-                    fig.add_trace(go.Scatter(x=xs, y=ys, mode='lines+markers', line=dict(width=2), marker=dict(size=4), opacity=0.5, showlegend=False))
+                    # Scia
+                    fig.add_trace(go.Scatter(x=xs, y=ys, mode='lines+markers', line=dict(width=2.5), marker=dict(size=5), opacity=0.4, showlegend=False))
                     # Punto attuale
-                    fig.add_trace(go.Scatter(x=[xs[-1]], y=[ys[-1]], mode='markers+text', name=name, text=[name], textposition="top center", marker=dict(size=14, line=dict(width=2, color="#0F2A56"))))
+                    fig.add_trace(go.Scatter(x=[xs[-1]], y=[ys[-1]], mode='markers+text', name=name, text=[f"<b>{name}</b>"], textposition="top center", 
+                                             textfont=dict(color="#0F2A56", size=11), marker=dict(size=14, line=dict(width=2, color="#FFFFFF"))))
                 
-                fig.add_shape(type="line", x0=100, x1=100, y0=fig.layout.yaxis.range[0] if fig.layout.yaxis.range else 90, y1=fig.layout.yaxis.range[1] if fig.layout.yaxis.range else 110, line=dict(color="gray", dash="dot"))
-                fig.add_shape(type="line", x0=fig.layout.xaxis.range[0] if fig.layout.xaxis.range else 90, x1=fig.layout.xaxis.range[1] if fig.layout.xaxis.range else 110, y0=100, y1=100, line=dict(color="gray", dash="dot"))
+                # Assi centrali incrociati a 100, spessi, visibili e professionali
+                fig.add_vline(x=100, line_width=2, line_color="#1A3A72", opacity=0.8)
+                fig.add_hline(y=100, line_width=2, line_color="#1A3A72", opacity=0.8)
                 
-                # Sfondo bianco per Plotly
-                fig.update_layout(template="plotly_white", height=600, xaxis_title="RS-Ratio (Forza)", yaxis_title="RS-Momentum (Velocità)", showlegend=False)
+                # Layout pulito, griglie leggere, background coeso
+                fig.update_layout(
+                    template="plotly_white", 
+                    height=650, 
+                    xaxis=dict(title="<b>RS-Ratio (Forza Relativa) ➔</b>", zeroline=False, gridcolor="#E4EDF8", showgrid=True, color="#1A3A72"), 
+                    yaxis=dict(title="<b>RS-Momentum (Velocità) ➔</b>", zeroline=False, gridcolor="#E4EDF8", showgrid=True, color="#1A3A72"),
+                    showlegend=False,
+                    margin=dict(l=50, r=50, t=30, b=50),
+                    plot_bgcolor="#FFFFFF",
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    hoverlabel=dict(bgcolor="#0F2A56", font_size=12, font_family="sans-serif", font_color="#FFFFFF")
+                )
+                
+                # Aggiunta label Quadranti negli angoli estremi
+                fig.add_annotation(x=1.0, y=1.0, xref="paper", yref="paper", text="LEADING", showarrow=False, font=dict(size=14, color="#059669", weight="bold"), opacity=0.3)
+                fig.add_annotation(x=0.0, y=1.0, xref="paper", yref="paper", text="IMPROVING", showarrow=False, font=dict(size=14, color="#3B82F6", weight="bold"), opacity=0.3)
+                fig.add_annotation(x=0.0, y=0.0, xref="paper", yref="paper", text="LAGGING", showarrow=False, font=dict(size=14, color="#DC2626", weight="bold"), opacity=0.3)
+                fig.add_annotation(x=1.0, y=0.0, xref="paper", yref="paper", text="WEAKENING", showarrow=False, font=dict(size=14, color="#D97706", weight="bold"), opacity=0.3)
+
                 st.plotly_chart(fig, use_container_width=True)
                 
                 # Tabella Risultati
-                st.subheader("Stato Attuale")
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.subheader("Stato Attuale Asset")
                 tbl = []
                 for name, v in results.items():
                     r, m = v["rs_ratio"].dropna(), v["rs_momentum"].dropna()
