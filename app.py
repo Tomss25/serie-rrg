@@ -12,20 +12,45 @@ import io
 import math
 
 # ==========================================
-# CONFIGURAZIONE & CSS
+# CONFIGURAZIONE & CSS (Light Blue)
 # ==========================================
 st.set_page_config(page_title="RRG & Historical Data Engine", layout="wide", page_icon="📊")
 
 st.markdown("""
 <style>
-    /* Fusione stili: Dark mode dominante per l'interfaccia */
-    .stApp { background-color: #0E1117; color: #FAFAFA; }
-    section[data-testid="stSidebar"] { background-color: #161B22; border-right: 1px solid #30363D; }
-    .stTextArea textarea { background-color: #21262D; color: #FFFFFF !important; border: 1px solid #30363D; }
-    h1, h2, h3 { color: #58A6FF !important; }
-    .metric-card { background: #161B22; border: 1px solid #30363D; border-radius: 12px; padding: 16px; margin-bottom: 10px;}
-    .mc-label { font-size: 11px; color: #8B949E; text-transform: uppercase; }
-    .mc-value { font-size: 24px; font-weight: bold; color: #58A6FF; }
+    /* Tema Light Blue Professionale */
+    .stApp { background-color: #F0F4FA; color: #0F2A56; }
+    
+    /* Sidebar */
+    section[data-testid="stSidebar"] { background-color: #E4EDF8; border-right: 1px solid #C4D6ED; }
+    section[data-testid="stSidebar"] * { color: #0F2A56 !important; }
+    
+    /* Input testuali */
+    .stTextArea textarea { background-color: #FFFFFF; color: #0F2A56 !important; border: 1px solid #AEC4E5; border-radius: 8px; }
+    .stTextArea textarea:focus { border-color: #3B82F6; box-shadow: 0 0 0 1px #3B82F6; }
+    
+    /* Titoli */
+    h1, h2, h3 { color: #1A3A72 !important; font-weight: 700; }
+    
+    /* Tabelle e metriche */
+    div[data-testid="stDataFrame"] { border: 1px solid #C4D6ED; border-radius: 10px; background-color: #FFFFFF; }
+    .metric-card { background: #FFFFFF; border: 1px solid #C4D6ED; border-radius: 12px; padding: 16px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(15, 42, 86, 0.05); }
+    .mc-label { font-size: 11px; color: #6B8CC4; text-transform: uppercase; font-weight: 600; }
+    .mc-value { font-size: 24px; font-weight: bold; color: #1A3A72; }
+    
+    /* Tabs */
+    button[data-baseweb="tab"] { color: #3B82F6; font-weight: 600; }
+    
+    /* Bottoni Sidebar */
+    div.stButton > button {
+        background: linear-gradient(90deg, #3B82F6 0%, #2563EB 100%);
+        color: white !important; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600;
+        box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2); width: 100%;
+    }
+    div.stButton > button:hover {
+        background: linear-gradient(90deg, #2563EB 0%, #1D4ED8 100%);
+        box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3); transform: translateY(-1px);
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -128,7 +153,8 @@ def get_data_yahoo(ticker, start_dt, end_dt):
         if not df.empty:
             col = 'Adj Close' if 'Adj Close' in df.columns else 'Close'
             series = df[col].squeeze()
-            if isinstance(series, pd.Series): return series.ffill()
+            if isinstance(series, pd.Series) and not series.empty: 
+                return series.ffill()
     except: return None
     return None
 
@@ -142,7 +168,8 @@ def get_data_morningstar(isin, start_dt, end_dt):
             df.set_index('date', inplace=True)
             series = df['nav']
             series.index = series.index.normalize().tz_localize(None)
-            return series
+            if not series.empty:
+                return series
     except: return None
     return None
 
@@ -195,8 +222,15 @@ if data_mode == "Scarica da API (Yahoo/MStar)":
             all_series = {}
             with st.spinner('Estrazione dati in corso...'):
                 for t in tickers_input:
-                    s = get_data_yahoo(t, start_dt, end_dt) or get_data_morningstar(t, start_dt, end_dt)
-                    if s is not None:
+                    # Tenta prima con Yahoo
+                    s = get_data_yahoo(t, start_dt, end_dt)
+                    
+                    # Se fallisce o restituisce vuoto, tenta Morningstar
+                    if s is None or s.empty:
+                        s = get_data_morningstar(t, start_dt, end_dt)
+                        
+                    # Se ha trovato dati validi, salva
+                    if s is not None and not s.empty:
                         s.name = t
                         all_series[t] = s
                     else:
@@ -253,8 +287,8 @@ with tab_data:
         st.subheader("Matrice di Correlazione")
         if len(df_final.columns) > 1:
             fig, ax = plt.subplots(figsize=(8, 3))
-            plt.style.use("dark_background")
-            sns.heatmap(df_final.pct_change().corr(), annot=True, cmap="RdYlGn", fmt=".2f", vmin=-1, vmax=1, ax=ax)
+            # Rimosso il dark_background per allinearsi al tema chiaro
+            sns.heatmap(df_final.pct_change().corr(), annot=True, cmap="RdYlBu_r", fmt=".2f", vmin=-1, vmax=1, ax=ax)
             st.pyplot(fig)
     else:
         st.info("👈 Estrai o carica dei dati dalla barra laterale per visualizzare le statistiche.")
@@ -280,7 +314,7 @@ with tab_rrg:
                 else:
                     results = compute_zscore_method(df_rrg, benchmark_col, sector_cols)
                 
-                # Plotly RRG Chart (Semplificata per integrazione rapida)
+                # Plotly RRG Chart (Adattata per il tema chiaro)
                 fig = go.Figure()
                 for name, v in results.items():
                     ratio = v["rs_ratio"].dropna()
@@ -291,12 +325,13 @@ with tab_rrg:
                     xs, ys = ratio.tail(8).values, mom.tail(8).values
                     fig.add_trace(go.Scatter(x=xs, y=ys, mode='lines+markers', line=dict(width=2), marker=dict(size=4), opacity=0.5, showlegend=False))
                     # Punto attuale
-                    fig.add_trace(go.Scatter(x=[xs[-1]], y=[ys[-1]], mode='markers+text', name=name, text=[name], textposition="top center", marker=dict(size=14, line=dict(width=2, color="white"))))
+                    fig.add_trace(go.Scatter(x=[xs[-1]], y=[ys[-1]], mode='markers+text', name=name, text=[name], textposition="top center", marker=dict(size=14, line=dict(width=2, color="#0F2A56"))))
                 
                 fig.add_shape(type="line", x0=100, x1=100, y0=fig.layout.yaxis.range[0] if fig.layout.yaxis.range else 90, y1=fig.layout.yaxis.range[1] if fig.layout.yaxis.range else 110, line=dict(color="gray", dash="dot"))
                 fig.add_shape(type="line", x0=fig.layout.xaxis.range[0] if fig.layout.xaxis.range else 90, x1=fig.layout.xaxis.range[1] if fig.layout.xaxis.range else 110, y0=100, y1=100, line=dict(color="gray", dash="dot"))
                 
-                fig.update_layout(template="plotly_dark", height=600, xaxis_title="RS-Ratio (Forza)", yaxis_title="RS-Momentum (Velocità)", showlegend=False)
+                # Sfondo bianco per Plotly
+                fig.update_layout(template="plotly_white", height=600, xaxis_title="RS-Ratio (Forza)", yaxis_title="RS-Momentum (Velocità)", showlegend=False)
                 st.plotly_chart(fig, use_container_width=True)
                 
                 # Tabella Risultati
