@@ -220,30 +220,12 @@ elif data_mode == "Carica File (CSV/Excel)":
         except Exception as e: st.sidebar.error(f"Errore: {e}")
 
 # ==========================================
-# MAIN APP TABS
+# MAIN APP TABS (INVERTITE)
 # ==========================================
 st.title("Asset & RRG Intelligence")
-tab_data, tab_rrg, tab_cheat = st.tabs(["📉 1. Serie Storiche & Statistiche", "🎯 2. Relative Rotation Graph (RRG)", "📋 3. Cheat Sheet Tickers"])
+tab_rrg, tab_data, tab_cheat = st.tabs(["🎯 1. Relative Rotation Graph (RRG)", "📉 2. Serie Storiche & Statistiche", "📋 3. Cheat Sheet Tickers"])
 
-# --- TAB 1: SERIE STORICHE ---
-with tab_data:
-    if st.session_state.master_df is not None:
-        df_final = st.session_state.master_df
-        col1, col2 = st.columns([2, 1])
-        with col1: st.line_chart((df_final / df_final.iloc[0]) * 100)
-        with col2:
-            metrics = []
-            ann_factor = 252 if df_final.index.to_series().diff().mean().days < 4 else (52 if df_final.index.to_series().diff().mean().days < 10 else 12)
-            for col in df_final.columns:
-                s = df_final[col]
-                ret = ((s.iloc[-1] / s.iloc[0]) - 1) * 100
-                vol = s.pct_change().std() * np.sqrt(ann_factor) * 100
-                dd = ((s - s.cummax()) / s.cummax()).min() * 100
-                metrics.append({"Asset": col, "Rendimento %": round(ret,2), "Volatilità %": round(vol,2), "Max DD %": round(dd,2)})
-            st.dataframe(pd.DataFrame(metrics).set_index("Asset"), use_container_width=True)
-    else: st.info("👈 Estrai o carica dei dati dalla barra laterale.")
-
-# --- TAB 2: RRG ---
+# --- TAB 1: RRG (EX TAB 2) ---
 with tab_rrg:
     if st.session_state.master_df is not None and len(st.session_state.master_df.columns) >= 2:
         df_rrg = st.session_state.master_df
@@ -277,7 +259,6 @@ with tab_rrg:
                     
                     xs, ys = ratio.tail(trail_length).values, mom.tail(trail_length).values
                     
-                    # Calcolo deviazione massima per mantenere assi perfettamente centrali a 100
                     max_dev_x = max(max_dev_x, max(abs(x - 100) for x in xs))
                     max_dev_y = max(max_dev_y, max(abs(y - 100) for y in ys))
 
@@ -290,11 +271,9 @@ with tab_rrg:
                                              textfont=dict(color="#0F2A56", size=11), marker=dict(size=14, line=dict(width=2, color="#FFFFFF")),
                                              showlegend=not show_labels, legendgroup=name))
                 
-                # Assi centrali incrociati a 100
                 fig.add_vline(x=100, line_width=2, line_color="#1A3A72", opacity=0.8)
                 fig.add_hline(y=100, line_width=2, line_color="#1A3A72", opacity=0.8)
                 
-                # Applica il range simmetrico perfetto
                 pad_x = max(2, max_dev_x * 1.1)
                 pad_y = max(2, max_dev_y * 1.1)
                 
@@ -307,7 +286,6 @@ with tab_rrg:
                     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1) if not show_labels else None
                 )
                 
-                # Quadranti
                 fig.add_annotation(x=1.0, y=1.0, xref="paper", yref="paper", text="LEADING", showarrow=False, font=dict(size=14, color="#059669", weight="bold"), opacity=0.3)
                 fig.add_annotation(x=0.0, y=1.0, xref="paper", yref="paper", text="IMPROVING", showarrow=False, font=dict(size=14, color="#3B82F6", weight="bold"), opacity=0.3)
                 fig.add_annotation(x=0.0, y=0.0, xref="paper", yref="paper", text="LAGGING", showarrow=False, font=dict(size=14, color="#DC2626", weight="bold"), opacity=0.3)
@@ -323,7 +301,32 @@ with tab_rrg:
                     tbl.append({"Asset": name, "RS-Ratio": round(r.iloc[-1],2), "RS-Mom": round(m.iloc[-1],2), "Quadrante": get_quadrant(r.iloc[-1], m.iloc[-1]).upper()})
                 st.dataframe(pd.DataFrame(tbl).sort_values("RS-Ratio", ascending=False).set_index("Asset"), use_container_width=True)
             except Exception as e: st.error(f"Errore: {e}")
-    else: st.warning("Servono almeno 2 asset caricati.")
+    else: st.warning("Servono almeno 2 asset caricati dalla barra laterale.")
+
+# --- TAB 2: SERIE STORICHE (EX TAB 1) ---
+with tab_data:
+    if st.session_state.master_df is not None:
+        df_final = st.session_state.master_df
+        col1, col2 = st.columns([2, 1])
+        with col1: 
+            st.markdown("**Andamento Normalizzato (Base 100)**")
+            st.line_chart((df_final / df_final.iloc[0]) * 100)
+        with col2:
+            st.markdown("**Metriche di Rischio/Rendimento**")
+            metrics = []
+            ann_factor = 252 if df_final.index.to_series().diff().mean().days < 4 else (52 if df_final.index.to_series().diff().mean().days < 10 else 12)
+            for col in df_final.columns:
+                s = df_final[col]
+                ret = ((s.iloc[-1] / s.iloc[0]) - 1) * 100
+                vol = s.pct_change().std() * np.sqrt(ann_factor) * 100
+                dd = ((s - s.cummax()) / s.cummax()).min() * 100
+                metrics.append({"Asset": col, "Rendimento %": round(ret,2), "Volatilità %": round(vol,2), "Max DD %": round(dd,2)})
+            st.dataframe(pd.DataFrame(metrics).set_index("Asset"), use_container_width=True)
+            
+        st.markdown("---")
+        st.subheader("Dati Storici Grezzi")
+        st.dataframe(df_final.sort_index(ascending=False).round(4), use_container_width=True)
+    else: st.info("👈 Estrai o carica dei dati dalla barra laterale.")
 
 # --- TAB 3: CHEAT SHEET ---
 with tab_cheat:
