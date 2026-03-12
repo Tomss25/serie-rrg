@@ -226,6 +226,9 @@ elif data_mode == "Carica File (CSV/Excel)":
 st.title("Asset & RRG Intelligence")
 tab_rrg, tab_data, tab_cheat = st.tabs(["🎯 1. Relative Rotation Graph (RRG)", "📉 2. Serie Storiche & Statistiche", "📋 3. Cheat Sheet Tickers"])
 
+# Palette di colori per assicurare coerenza tra coda, testa e grafici
+SECTOR_COLORS = ["#636EFA", "#EF553B", "#00CC96", "#AB63FA", "#FFA15A", "#19D3F3", "#FF6692", "#B6E880", "#FF97FF", "#FECB52"]
+
 # --- TAB 1: RRG & MACRO MAP ---
 with tab_rrg:
     if st.session_state.master_df is not None and len(st.session_state.master_df.columns) >= 2:
@@ -253,22 +256,26 @@ with tab_rrg:
                 max_dev_x = 0
                 max_dev_y = 0
 
+                color_idx = 0
                 for name, v in results.items():
                     ratio = v["rs_ratio"].dropna()
                     mom = v["rs_momentum"].dropna()
                     if ratio.empty or mom.empty: continue
+                    
+                    color = SECTOR_COLORS[color_idx % len(SECTOR_COLORS)]
+                    color_idx += 1
                     
                     xs, ys = ratio.tail(trail_length).values, mom.tail(trail_length).values
                     max_dev_x = max(max_dev_x, max(abs(x - 100) for x in xs))
                     max_dev_y = max(max_dev_y, max(abs(y - 100) for y in ys))
 
                     if show_trails:
-                        fig.add_trace(go.Scatter(x=xs, y=ys, mode='lines+markers', line=dict(width=2.5), marker=dict(size=5), opacity=0.4, showlegend=False, legendgroup=name, name=name))
+                        fig.add_trace(go.Scatter(x=xs, y=ys, mode='lines+markers', line=dict(width=2.5, color=color), marker=dict(size=5, color=color), opacity=0.4, showlegend=False, legendgroup=name, name=name))
                     
                     mode = 'markers+text' if show_labels else 'markers'
                     text_label = [f"<b>{name}</b>"] if show_labels else None
                     fig.add_trace(go.Scatter(x=[xs[-1]], y=[ys[-1]], mode=mode, name=name, text=text_label, textposition="top center", 
-                                             textfont=dict(color="#0F2A56", size=11), marker=dict(size=14, line=dict(width=2, color="#FFFFFF")),
+                                             textfont=dict(color="#0F2A56", size=11), marker=dict(size=14, color=color, line=dict(width=2, color="#FFFFFF")),
                                              showlegend=not show_labels, legendgroup=name))
                 
                 fig.add_vline(x=100, line_width=2, line_color="#1A3A72", opacity=0.8)
@@ -277,11 +284,10 @@ with tab_rrg:
                 pad_x = max(2, max_dev_x * 1.1)
                 pad_y = max(2, max_dev_y * 1.1)
 
-                # Colori Sfondo Quadranti
-                fig.add_shape(type="rect", x0=100, y0=100, x1=100 + pad_x, y1=100 + pad_y, fillcolor="rgba(5, 150, 105, 0.05)", line_width=0, layer="below") # Leading
-                fig.add_shape(type="rect", x0=100 - pad_x, y0=100, x1=100, y1=100 + pad_y, fillcolor="rgba(59, 130, 246, 0.05)", line_width=0, layer="below") # Improving
-                fig.add_shape(type="rect", x0=100 - pad_x, y0=100 - pad_y, x1=100, y1=100, fillcolor="rgba(220, 38, 38, 0.05)", line_width=0, layer="below") # Lagging
-                fig.add_shape(type="rect", x0=100, y0=100 - pad_y, x1=100 + pad_x, y1=100, fillcolor="rgba(217, 119, 6, 0.05)", line_width=0, layer="below") # Weakening
+                fig.add_shape(type="rect", x0=100, y0=100, x1=100 + pad_x, y1=100 + pad_y, fillcolor="rgba(5, 150, 105, 0.05)", line_width=0, layer="below")
+                fig.add_shape(type="rect", x0=100 - pad_x, y0=100, x1=100, y1=100 + pad_y, fillcolor="rgba(59, 130, 246, 0.05)", line_width=0, layer="below")
+                fig.add_shape(type="rect", x0=100 - pad_x, y0=100 - pad_y, x1=100, y1=100, fillcolor="rgba(220, 38, 38, 0.05)", line_width=0, layer="below")
+                fig.add_shape(type="rect", x0=100, y0=100 - pad_y, x1=100 + pad_x, y1=100, fillcolor="rgba(217, 119, 6, 0.05)", line_width=0, layer="below")
                 
                 fig.update_layout(
                     template="plotly_white", height=650, 
@@ -305,11 +311,9 @@ with tab_rrg:
                 
                 fig_macro = go.Figure()
                 
-                # Sinusoide
                 x_curve = np.linspace(0, 4, 200)
                 y_curve = np.sin(x_curve * np.pi / 2 - np.pi/2)
                 
-                # Aree colorate
                 fig_macro.add_vrect(x0=0, x1=1, fillcolor="rgba(34, 197, 94, 0.1)", line_width=0, annotation_text="Expansion", annotation_position="bottom right", annotation_font_color="#059669")
                 fig_macro.add_vrect(x0=1, x1=2, fillcolor="rgba(239, 68, 68, 0.1)", line_width=0, annotation_text="Contraction", annotation_position="bottom right", annotation_font_color="#DC2626")
                 fig_macro.add_vrect(x0=2, x1=3, fillcolor="rgba(239, 68, 68, 0.1)", line_width=0, annotation_text="Recession", annotation_position="bottom right", annotation_font_color="#DC2626")
@@ -317,25 +321,37 @@ with tab_rrg:
 
                 fig_macro.add_trace(go.Scatter(x=x_curve, y=y_curve, mode='lines', line=dict(color="#1A3A72", width=2), showlegend=False))
                 
-                # Punti sulla sinusoide
+                color_idx = 0
                 for name, v in results.items():
                     r, m = v["rs_ratio"].dropna(), v["rs_momentum"].dropna()
                     if r.empty: continue
+                    
+                    color = SECTOR_COLORS[color_idx % len(SECTOR_COLORS)]
+                    color_idx += 1
                     
                     rx, ry = r.iloc[-1] - 100, m.iloc[-1] - 100
                     angle = math.atan2(ry, rx)
                     if angle < 0: angle += 2 * math.pi
                     
-                    if rx >= 0 and ry >= 0: macro_x = 0 + (angle / (math.pi/2)) # Leading -> Expansion
-                    elif rx >= 0 and ry < 0: macro_x = 1 + ((2*math.pi - angle) / (math.pi/2)) # Weakening -> Contraction
-                    elif rx < 0 and ry < 0: macro_x = 2 + ((angle - math.pi) / (math.pi/2)) # Lagging -> Recession
-                    else: macro_x = 3 + ((math.pi - angle) / (math.pi/2)) # Improving -> Recovery
+                    if rx >= 0 and ry >= 0: macro_x = 0 + (angle / (math.pi/2))
+                    elif rx >= 0 and ry < 0: macro_x = 1 + ((2*math.pi - angle) / (math.pi/2))
+                    elif rx < 0 and ry < 0: macro_x = 2 + ((angle - math.pi) / (math.pi/2))
+                    else: macro_x = 3 + ((math.pi - angle) / (math.pi/2))
                     
                     macro_y = np.sin(macro_x * np.pi / 2 - np.pi/2)
                     
-                    fig_macro.add_trace(go.Scatter(x=[macro_x], y=[macro_y], mode='markers+text', name=name, text=[f"<b>{name}</b>"], textposition="top center", textfont=dict(color="#0F2A56", size=11), marker=dict(size=14, line=dict(width=2, color="#FFFFFF")), showlegend=False))
+                    mode_macro = 'markers+text' if show_labels else 'markers'
+                    text_label_macro = [f"<b>{name}</b>"] if show_labels else None
+                    
+                    fig_macro.add_trace(go.Scatter(x=[macro_x], y=[macro_y], mode=mode_macro, name=name, text=text_label_macro, textposition="top center", textfont=dict(color="#0F2A56", size=11), marker=dict(size=14, color=color, line=dict(width=2, color="#FFFFFF")), showlegend=not show_labels, legendgroup=name))
 
-                fig_macro.update_layout(template="plotly_white", height=400, xaxis=dict(showgrid=False, zeroline=False, showticklabels=False), yaxis=dict(showgrid=False, zeroline=False, showticklabels=False), margin=dict(l=20, r=20, t=20, b=40))
+                fig_macro.update_layout(
+                    template="plotly_white", height=400, 
+                    xaxis=dict(showgrid=False, zeroline=False, showticklabels=False), 
+                    yaxis=dict(showgrid=False, zeroline=False, showticklabels=False), 
+                    margin=dict(l=20, r=20, t=20, b=40),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1) if not show_labels else None
+                )
                 st.plotly_chart(fig_macro, use_container_width=True)
 
                 # --- TABELLA RISULTATI ---
