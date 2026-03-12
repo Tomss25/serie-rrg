@@ -276,6 +276,12 @@ with tab_rrg:
                 
                 pad_x = max(2, max_dev_x * 1.1)
                 pad_y = max(2, max_dev_y * 1.1)
+
+                # Colori Sfondo Quadranti
+                fig.add_shape(type="rect", x0=100, y0=100, x1=100 + pad_x, y1=100 + pad_y, fillcolor="rgba(5, 150, 105, 0.05)", line_width=0, layer="below") # Leading
+                fig.add_shape(type="rect", x0=100 - pad_x, y0=100, x1=100, y1=100 + pad_y, fillcolor="rgba(59, 130, 246, 0.05)", line_width=0, layer="below") # Improving
+                fig.add_shape(type="rect", x0=100 - pad_x, y0=100 - pad_y, x1=100, y1=100, fillcolor="rgba(220, 38, 38, 0.05)", line_width=0, layer="below") # Lagging
+                fig.add_shape(type="rect", x0=100, y0=100 - pad_y, x1=100 + pad_x, y1=100, fillcolor="rgba(217, 119, 6, 0.05)", line_width=0, layer="below") # Weakening
                 
                 fig.update_layout(
                     template="plotly_white", height=650, 
