@@ -6,3 +6,5 @@ numpy>=1.24.0
 matplotlib>=3.7.0
 seaborn>=0.13.0
 plotly>=5.18.0
+webdriver-manager
+selenium
