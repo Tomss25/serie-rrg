@@ -366,14 +366,27 @@ with tab_rrg:
                 )
                 st.plotly_chart(fig_macro, use_container_width=True)
 
-                # --- TABELLA RISULTATI ---
+                # --- TABELLA RISULTATI (STYLE AGGIORNATO) ---
                 st.subheader("Stato Attuale Asset")
                 tbl = []
                 for name, v in results.items():
                     r, m = v["rs_ratio"].dropna(), v["rs_momentum"].dropna()
                     if r.empty: continue
                     tbl.append({"Asset": name, "RS-Ratio": round(r.iloc[-1],2), "RS-Mom": round(m.iloc[-1],2), "Quadrante": get_quadrant(r.iloc[-1], m.iloc[-1]).upper()})
-                st.dataframe(pd.DataFrame(tbl).sort_values("RS-Ratio", ascending=False).set_index("Asset"), use_container_width=True)
+                
+                df_tbl = pd.DataFrame(tbl).sort_values("RS-Ratio", ascending=False).set_index("Asset")
+                
+                def color_quadrants(row):
+                    q = row['Quadrante']
+                    if q == 'LEADING': color = 'rgba(5, 150, 105, 0.15)'
+                    elif q == 'IMPROVING': color = 'rgba(59, 130, 246, 0.15)'
+                    elif q == 'LAGGING': color = 'rgba(220, 38, 38, 0.15)'
+                    elif q == 'WEAKENING': color = 'rgba(217, 119, 6, 0.15)'
+                    else: color = ''
+                    return [f'background-color: {color}' if color else ''] * len(row)
+                
+                st.dataframe(df_tbl.style.apply(color_quadrants, axis=1), use_container_width=True)
+
             except Exception as e: st.error(f"Errore: {e}")
     else: st.warning("Servono almeno 2 asset caricati dalla barra laterale.")
 
