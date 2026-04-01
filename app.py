@@ -1,4 +1,17 @@
 import streamlit as st
+import signal
+
+# --- PATCH PER STREAMLIT CLOUD E MSTARPY ---
+# Ignora l'errore del signal handler fuori dal main thread
+original_signal = signal.signal
+def patched_signal(signum, handler):
+    try:
+        return original_signal(signum, handler)
+    except ValueError:
+        pass
+signal.signal = patched_signal
+# -------------------------------------------
+
 import yfinance as yf
 import mstarpy
 import pandas as pd
@@ -14,7 +27,7 @@ import io
 # ==========================================
 # CONFIGURAZIONE & CSS (Light Blue)
 # ==========================================
-st.set_page_config(page_title="RRG & Historical Data Engine", layout="wide", page_icon="📊")
+st.set_page_config(page_title="RRG & Macro Intelligence", layout="wide", page_icon="📊")
 
 st.markdown("""
 <style>
@@ -226,7 +239,6 @@ elif data_mode == "Carica File (CSV/Excel)":
 st.title("Asset & RRG Intelligence")
 tab_rrg, tab_data, tab_cheat = st.tabs(["🎯 1. Relative Rotation Graph (RRG)", "📉 2. Serie Storiche & Statistiche", "📋 3. Cheat Sheet Tickers"])
 
-# Palette di colori per assicurare coerenza tra coda, testa e grafici
 SECTOR_COLORS = ["#636EFA", "#EF553B", "#00CC96", "#AB63FA", "#FFA15A", "#19D3F3", "#FF6692", "#B6E880", "#FF97FF", "#FECB52"]
 
 # --- TAB 1: RRG & MACRO MAP ---
